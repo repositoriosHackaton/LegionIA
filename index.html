@@ -1,0 +1,95 @@
+<!DOCTYPE HTML>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
+<script>
+window.onload = function () {
+    var chart = new CanvasJS.Chart("chartContainer", {
+        title: {
+            text: "Condición del agua basada en los datos ingresados",
+        },
+        axisX: {
+            lineThickness: 0,
+            tickLength: 0,
+            lineColor: "white"
+        },
+        data: [{
+            type: "column",
+            yValueFormatString: "#,###.##",
+            indexLabel: "{y}",
+            dataPoints: [
+                { label: "Temperatura", y: 0, color: "#61BFF9", toolTipContent: "Para que el agua sea potable, su pH debe estar en el rango de 6.5 a 8.5" },
+                { label: "Oxígeno disuelto", y: 0, color: "#94D7FC", toolTipContent: "Para que el agua sea potable, su dureza total debe ser menor de 300 mg/L" },
+                { label: "pH", y: 0, color: "#BFE6FE", toolTipContent: "Para que el agua sea potable, las cloraminas deben ser menores de 4 mg/L" },
+                { label: "Conductividad", y: 0, color: "#61BFF9", toolTipContent: "Para que el agua sea potable, el sulfato debe ser menor de 250 mg/L" },
+                { label: "Demanda bioquímica de oxígeno", y: 0, color: "#94D7FC", toolTipContent: "Para que el agua sea potable, la conductividad debe ser menor de 2500 µS/cm" },
+                { label: "Nitrato", y: 0, color: "#BFE6FE", toolTipContent: "Para que el agua sea potable, el carbono orgánico total debe ser menor de 2 mg/L" },
+                { label: "Fecal califorme", y: 0, color: "#61BFF9", toolTipContent: "Para que el agua sea potable, los trihalometanos deben ser menores de 0.1 mg/L" },
+                { label: "Total califorme", y: 0, color: "#94D7FC", toolTipContent: "Para que el agua sea potable, la turbidez debe ser menor de 1 NTU" }
+            ]
+        }]
+    });
+
+    chart.render();
+
+    document.getElementById("form").addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        var formData = new FormData(document.getElementById("form"));
+        var dps = chart.options.data[0].dataPoints;
+
+        var i = 0;
+        formData.forEach(function(value, key) {
+            dps[i].y = parseFloat(value) || 0;
+            i++;
+        });
+
+        chart.render();
+
+        var url = 'http://127.0.0.1:8000/model?' + new URLSearchParams(formData).toString();
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            mode: 'cors'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta del servidor:', data);
+            chart.options.title.text = data.detail[0].msg ? "El agua es potable" : "El agua no es potable";
+            chart.render();
+        })
+        .catch(error => {
+            console.error('Error al enviar la solicitud:', error);
+        });
+    });
+}
+</script>
+</head>
+<body>
+    <nav style="background-color: #06224c;" class="p-6 ">
+        <h1 class="text-white ml-8 text-left font-bold" style="font-size: 38px;">Potablys</h1>
+    </nav>
+    <div class="container flex mx-auto mt-8">
+        <form id="form" class="flex-colum mb-4">
+            <input type="number" name="temperature" placeholder="Temperatura" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="do" placeholder="Oxígeno disuelto" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="pH" placeholder="pH" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="conductivity" placeholder="Conductividad" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="bod" placeholder="Demanda bioquímica de oxígeno" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="nitrate" placeholder="Nitrato" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="fecalcaliform" placeholder="Fecal califorme" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <input type="number" name="totalcaliform" placeholder="Total califorme" step="0.01" required class="mb-4 h-10 w-30 p-2 rounded-lg shadow-md block pl-6" style="background-color: hsla(191, 50%, 58%, 0.144);">
+            <button type="submit" class="text-white py-2 px-4 h-10 rounded-lg shadow-md pl-6 pr-6" style="background-color: #06224c;">Enviar datos</button>
+        </form>
+        <div id="chartContainer" class="mx-auto" style="height: 400px; width: 830px; padding-top: 2.5rem; margin-left: 10rem;"></div>
+        <div id="responseMessage" class="mt-4 text-center text-2xl"></div>
+    </div>
+</body>
+</html>
+
